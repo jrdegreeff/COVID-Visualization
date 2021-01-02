@@ -35,7 +35,7 @@ end
 begin
 	# Data source: New York Times (https://github.com/nytimes/covid-19-data)
 	data_url = "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv"
-	filename = "covid_state_data.csv"
+	filename = "data/covid_state_data.csv"
 	download(data_url, filename)
 	all_data = CSV.read(filename, DataFrame)
 end
