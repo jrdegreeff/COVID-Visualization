@@ -38,10 +38,6 @@ begin
 	filename = "data/covid_state_data.csv"
 	download(data_url, filename)
 	all_data = CSV.read(filename, DataFrame)
-end
-
-# ╔═╡ 3a839130-4cc1-11eb-0587-619b14c03151
-begin
 	indexed_states = collect(all_data[:, :state])
 	unique_states = sort(unique(indexed_states))
 	indexed_dates = collect(all_data[:, :date])
@@ -49,7 +45,7 @@ begin
 end;
 
 # ╔═╡ aadc3bac-4cc5-11eb-298c-1182973f7011
-# TODO: normalize for population
+# TODO: collect population data
 
 # ╔═╡ 9e089168-4cc1-11eb-023a-8d7cfd681e88
 # Function to extract case count for a state on a day
@@ -59,18 +55,19 @@ function get_case_count(state, date)
     return length(cases) == 1 ? cases[1] : 0
 end;
 
-# ╔═╡ c840cbbc-4cc1-11eb-200a-e311c046270b
-# TODO: state selection mechanism
-states = [
-    "Connecticut",
-    "Maine",
-    "Massachusetts",
-    "New Hampshire",
-    "New Jersey",
-    "New York",
-    "Rhode Island",
-    "Vermont",
-]
+# ╔═╡ f669e836-4da0-11eb-01f7-c525fe9ef746
+begin
+	# selection = [false for _ ∈ unique_states]
+	# checkboxes = [@bind selection[i] CheckBox(default=false) for (i, state) ∈ enumerate(unique_states)]
+	# checkboxes = [CheckBox(default=false) for (i, state) ∈ enumerate(unique_states)]
+	# content = [md""" $(checkboxes[i]) $(state)""" for (i, state) ∈ enumerate(unique_states)]
+	select = @bind states MultiSelect(unique_states)
+	md"""
+	Select the states to display.
+	
+	$(select)
+	"""
+end
 
 # ╔═╡ dd4ae0b4-4cc2-11eb-0dad-7de8cb6c055b
 begin
@@ -101,10 +98,14 @@ function plot_covid(aggregate_data, dates, date_index, min_value = 50)
 
     # Weekly change data is the number of new cases in the past week
     weekly_change_data = Dict(c => [d[i] - d[max(1, i - 6)] for i ∈ 1:num_days] for (c, d) ∈ aggregate_data)
+	
+	# Average daily change data is the average number of new cases per day in the past week
+	average_daily_change_data = Dict(c => [(d[i] - d[max(1, i - 6)]) / 7 for i ∈ 1:num_days] for (c, d) ∈ aggregate_data)
 
-    # Only show when total cases > 50, as in the original visualization
+    # Only show when total cases > min_value
     aggregate_data = floatify(aggregate_data, min_value)
     weekly_change_data = floatify(weekly_change_data)
+    average_daily_change_data = floatify(average_daily_change_data)
 
 	p = plot(xscale = :log10, yscale = :log10, leg = false)
 	xlims!(10^floor(Int64, log(10, min_value)), max_value(aggregate_data))
@@ -125,18 +126,19 @@ end;
 
 # ╔═╡ c60b7e00-4cc1-11eb-2e78-c1a55563de15
 begin
-	aggregate_data = Dict(s => [get_case_count(s, d) for d ∈ unique_dates] for s ∈ states)
-	plot_covid(aggregate_data, unique_dates, date_index, 100)
+	if !isempty(states)
+		aggregate_data = Dict(s => [get_case_count(s, d) for d ∈ unique_dates] for s ∈ states)
+		plot_covid(aggregate_data, unique_dates, date_index, 100)
+	end
 end
 
 # ╔═╡ Cell order:
 # ╟─073afcbe-4cbf-11eb-33a8-a327232257eb
 # ╠═fd95c222-4cbf-11eb-0690-57cc206d122a
-# ╠═3a839130-4cc1-11eb-0587-619b14c03151
 # ╠═aadc3bac-4cc5-11eb-298c-1182973f7011
 # ╠═9e089168-4cc1-11eb-023a-8d7cfd681e88
-# ╠═c840cbbc-4cc1-11eb-200a-e311c046270b
-# ╟─dd4ae0b4-4cc2-11eb-0dad-7de8cb6c055b
+# ╠═f669e836-4da0-11eb-01f7-c525fe9ef746
+# ╠═dd4ae0b4-4cc2-11eb-0dad-7de8cb6c055b
 # ╠═c60b7e00-4cc1-11eb-2e78-c1a55563de15
 # ╟─3fbcd01c-4cc2-11eb-2613-190f71f8b3c7
 # ╠═4d68678c-4cc2-11eb-1832-9921503256c1
