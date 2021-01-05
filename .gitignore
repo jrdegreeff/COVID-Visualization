@@ -1,1 +1,2 @@
-data/*.csv
+data/*
+!data/state_population_data_2020.csv
