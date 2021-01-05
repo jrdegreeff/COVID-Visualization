@@ -33,15 +33,29 @@ begin
 	using PlutoUI
 end
 
+# ╔═╡ 1b720d94-4f8f-11eb-0baf-bbcd93231972
+md"""
+# United States COVID-19 Visualization
+This is a visualization of weekly reported COVID-19 cases against total reported cases. The plot is done on a log-scale causing exponential growth to be represented linearly. Since time is not explicitly represented on the graph, it allows for direct comparison between states who experienced similar case trends at different times. The visualization also provides an option to normalize for population data to give a better comparison for states with vastly different populations.
+
+This project was inspired by Problem Set 1 for [MIT Course 6.S083 Spring 2020](https://www.eecs.mit.edu/academics-admissions/academic-information/subject-updates-spring-2020/6s083) and [this visualization](https://aatishb.com/covidtrends/) created by Aatish Bhatia.
+"""
+
 # ╔═╡ 7ec0992a-4f8e-11eb-3500-53545a706222
 md"""
 ## Data Preparation
 """
 
+# ╔═╡ 2bd8a378-4f8f-11eb-3e67-ed3ed64e820c
+begin
+	data_url = "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv"
+	md"""
+	US State COVID-19 Data Source: [New York Times](https://github.com/nytimes/covid-19-data)
+	"""
+end
+
 # ╔═╡ fd95c222-4cbf-11eb-0690-57cc206d122a
 begin
-	# Data source: New York Times (https://github.com/nytimes/covid-19-data)
-	data_url = "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv"
 	covid_data_filename = "data/covid_state_data.csv"
 	download(data_url, covid_data_filename)
 	covid_data = CSV.read(covid_data_filename, DataFrame)
@@ -49,11 +63,16 @@ begin
 	unique_states = sort(unique(indexed_states))
 	indexed_dates = collect(covid_data[:, :date])
 	unique_dates = sort(unique(indexed_dates))
-end;
+	covid_data
+end
+
+# ╔═╡ 4f0a03d2-4f8f-11eb-3f36-edbec0b6a9c3
+md"""
+US State Population Data Source: [United States Census Bureau](https://www.census.gov/programs-surveys/popest/technical-documentation/research/evaluation-estimates.html)
+"""
 
 # ╔═╡ aadc3bac-4cc5-11eb-298c-1182973f7011
 begin
-	# Data source: United States Census Bureau (https://www.census.gov/programs-surveys/popest/technical-documentation/research/evaluation-estimates.html)
 	population_data_filename = "data/state_population_data_2020.csv"
 	population_data = CSV.read(population_data_filename, DataFrame)
 	population_states = collect(population_data[:, :state])
@@ -61,7 +80,8 @@ begin
 	transform!(normalized_covid_data, [:state, :cases] => ((states, cases) -> 1e5 * cases ./ (s -> population_data[population_states.==s, :population][1]).(states)) => :cases)
 	normalized_indexed_states = collect(normalized_covid_data[:, :state])
 	normalized_indexed_dates = collect(normalized_covid_data[:, :date])
-end;
+	population_data
+end
 
 # ╔═╡ 9e089168-4cc1-11eb-023a-8d7cfd681e88
 # Function to extract case count for a state on a day
@@ -209,10 +229,13 @@ end
 
 # ╔═╡ Cell order:
 # ╟─073afcbe-4cbf-11eb-33a8-a327232257eb
+# ╟─1b720d94-4f8f-11eb-0baf-bbcd93231972
 # ╟─7ec0992a-4f8e-11eb-3500-53545a706222
-# ╠═fd95c222-4cbf-11eb-0690-57cc206d122a
-# ╠═aadc3bac-4cc5-11eb-298c-1182973f7011
-# ╠═9e089168-4cc1-11eb-023a-8d7cfd681e88
+# ╟─2bd8a378-4f8f-11eb-3e67-ed3ed64e820c
+# ╟─fd95c222-4cbf-11eb-0690-57cc206d122a
+# ╟─4f0a03d2-4f8f-11eb-3f36-edbec0b6a9c3
+# ╟─aadc3bac-4cc5-11eb-298c-1182973f7011
+# ╟─9e089168-4cc1-11eb-023a-8d7cfd681e88
 # ╟─70496912-4f8e-11eb-28ca-c50ae0af115e
 # ╟─b9c78b8a-4edf-11eb-0a36-c72d60e4680a
 # ╟─b7aa216e-4f8d-11eb-339c-394d2c23ee4f
