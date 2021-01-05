@@ -104,9 +104,9 @@ md"""
 
 # ╔═╡ b9c78b8a-4edf-11eb-0a36-c72d60e4680a
 begin
-	checkbox = @bind normalize CheckBox(default=true)
+	normalize_checkbox = @bind normalize CheckBox(default=true)
 	md"""
-	Normalize by population $(checkbox)
+	Normalize by population $(normalize_checkbox)
 	"""
 end
 
@@ -114,7 +114,23 @@ end
 begin
 	date_slider = @bind date_index Slider(1:length(unique_dates), default=1, show_value=true)
 	md"""
-	Days Since $(unique_dates[1]): $(date_slider)
+	Days since $(unique_dates[1]): $(date_slider)
+	"""
+end
+
+# ╔═╡ e7871fa2-4f9c-11eb-0d97-f7040e7c285c
+begin
+	double_rate_slider = @bind double_rate Slider(1:100, default=7, show_value=true)
+	md"""
+	Exponential growth doubling rate (in days): $(double_rate_slider)
+	"""
+end
+
+# ╔═╡ 68593592-4f9e-11eb-2fac-bb30829cb8f0
+begin
+	legend_checkbox = @bind legend CheckBox(default=true)
+	md"""
+	Show legend $(legend_checkbox)
 	"""
 end
 
@@ -123,54 +139,56 @@ md"""
 ## Plotting Library
 """
 
-# ╔═╡ 4d68678c-4cc2-11eb-1832-9921503256c1
+# ╔═╡ 513019c0-4f9a-11eb-1086-b795d60a5b50
+# Function to apply a function over a dictionary of data sequences
+apply_over_dict(func, dict, args=()) = Dict(k => isempty(args) ? func(v) : func(v, args) for (k,v) ∈ dict)
+
+# ╔═╡ 54673912-4f99-11eb-36ca-9b0124ed444b
+# Function to convert aggregate data to weekly data
+aggreggate_to_weekly_change(aggregate_data) = [aggregate_data[i] -  aggregate_data[max(1, i - 6)] for i ∈ 1:length(aggregate_data)]
+
+# ╔═╡ 76fb1292-4f95-11eb-1824-4d5437b91463
 # Function to prepare version of data for a log range
-floatify(data, min_value = 0) = Dict(c => map(x -> x > min_value ? x : NaN, d) for (c, d) ∈ data)
+truncate(data, min_value = 0) = map(x -> x > min_value ? x : NaN, data)
 
 # ╔═╡ 6bb8b566-4cc2-11eb-330b-13eae1cc5858
 # Function to determine upper bound for a log range
-max_value(data) = 10^ceil(Int64, log(10, maximum([d for (_, c) ∈ data for d ∈ c if d !== NaN])))
+max_value(data) = 10^ceil(Int64, log(10, maximum([d for (_, s) ∈ data for d ∈ s if d !== NaN])))
 
 # ╔═╡ 7a669466-4cc2-11eb-1359-f3f2d060452b
 # Function to plot weekly change vs aggregate on a log scale
-function plot_covid(aggregate_data, dates, date_index, min_value = 50)
-    num_days = length(dates)
-    locations = collect(keys(aggregate_data))
-
-    # Weekly change data is the number of new cases in the past week
-    weekly_change_data = Dict(c => [d[i] - d[max(1, i - 6)] for i ∈ 1:num_days] for (c, d) ∈ aggregate_data)
-	
-	# Average daily change data is the average number of new cases per day in the past week
-	average_daily_change_data = Dict(c => [(d[i] - d[max(1, i - 6)]) / 7 for i ∈ 1:num_days] for (c, d) ∈ aggregate_data)
-
-    # Only show when total cases > min_value
-    aggregate_data = floatify(aggregate_data, min_value)
-    weekly_change_data = floatify(weekly_change_data)
-    average_daily_change_data = floatify(average_daily_change_data)
-
+function plot_covid(aggregate_data, dates, date_index; min_value = 10, double_rate = missing, normalize = false)
 	p = plot(xscale=:log10, yscale=:log10, leg=:bottomright)
-	xlims!(10^floor(Int64, log(10, min_value)), max_value(aggregate_data))
-	ylims!(1, max_value(weekly_change_data))
-	for (i, c) in enumerate(locations)
-		plot!(
-			aggregate_data[c][1:date_index],
-			weekly_change_data[c][1:date_index],
-			color=i,
-			label=false
-		)
-		if !isnan(aggregate_data[c][date_index]) && !isnan(weekly_change_data[c][date_index])
-			scatter!(
-				aggregate_data[c][date_index:date_index],
-				weekly_change_data[c][date_index:date_index],
-				color=i,
-				label=c
-			)
-		end
-	end
+	title!("Trajectory of COVID-19 Confirmed Cases ($(dates[date_index]))")
 	xlabel!(normalize ? "Total Confirmed Cases per 100,000 Residents" : "Total Confirmed Cases")
 	ylabel!(normalize ? "Recent Confirmed Cases per 100,000 Residents" : "Recent Confirmed Cases")
-	title!("Trajectory of COVID-19 Confirmed Cases ($(dates[date_index]))")
-	p |> as_svg
+	
+    # Weekly change data is the number of new cases in the past week
+    weekly_change_data = apply_over_dict(aggreggate_to_weekly_change, aggregate_data)
+	
+	aggregate_data = apply_over_dict(truncate, aggregate_data, min_value)
+    weekly_change_data = apply_over_dict(truncate, weekly_change_data)
+	
+	xlims!(10^floor(Int64, log(10, min_value)), max_value(aggregate_data))
+	ylims!(1, max_value(weekly_change_data))
+	for (i, c) in enumerate(keys(aggregate_data))
+		plot!(aggregate_data[c][1:date_index], weekly_change_data[c][1:date_index], color=i, label=false)
+		if !isnan(aggregate_data[c][date_index]) && !isnan(weekly_change_data[c][date_index])
+			scatter!(aggregate_data[c][date_index:date_index], weekly_change_data[c][date_index:date_index], color=i, label=c, markerstrokewidth=0)
+		end
+	end
+	
+	if !ismissing(double_rate)
+		# Exponential data provides a reference for what pure exponential growth with a particular growth rate would look like
+		exponential_aggregate = [2^(t / double_rate) for t ∈ 0:ceil(log2(max_value(aggregate_data)) * double_rate)]
+		exponential_weekly_change = aggreggate_to_weekly_change(exponential_aggregate)
+
+		exponential_aggregate = truncate(exponential_aggregate)
+		exponential_weekly_change = truncate(exponential_weekly_change)
+
+		plot!(exponential_aggregate, exponential_weekly_change, color=:gray, lw=2, label="Exponential Growth (d=$(double_rate))")
+	end
+	p
 end
 
 # ╔═╡ 2180a1f4-4f8b-11eb-073b-4f671634dc37
@@ -223,7 +241,9 @@ end
 begin
 	if !isempty(states)
 		aggregate_data = Dict(s => [get_case_count(s, d, normalize) for d ∈ unique_dates] for s ∈ states)
-		plot_covid(aggregate_data, unique_dates, date_index, 100)
+		p = plot_covid(aggregate_data, unique_dates, date_index; double_rate=double_rate, normalize=normalize)
+		if !legend plot!(p, leg=false) end
+		p |> as_svg
 	end
 end
 
@@ -240,10 +260,14 @@ end
 # ╟─b9c78b8a-4edf-11eb-0a36-c72d60e4680a
 # ╟─b7aa216e-4f8d-11eb-339c-394d2c23ee4f
 # ╟─dd4ae0b4-4cc2-11eb-0dad-7de8cb6c055b
-# ╟─c60b7e00-4cc1-11eb-2e78-c1a55563de15
+# ╟─e7871fa2-4f9c-11eb-0d97-f7040e7c285c
+# ╟─68593592-4f9e-11eb-2fac-bb30829cb8f0
+# ╠═c60b7e00-4cc1-11eb-2e78-c1a55563de15
 # ╟─3fbcd01c-4cc2-11eb-2613-190f71f8b3c7
-# ╟─4d68678c-4cc2-11eb-1832-9921503256c1
+# ╟─513019c0-4f9a-11eb-1086-b795d60a5b50
+# ╟─54673912-4f99-11eb-36ca-9b0124ed444b
+# ╟─76fb1292-4f95-11eb-1824-4d5437b91463
 # ╟─6bb8b566-4cc2-11eb-330b-13eae1cc5858
-# ╟─7a669466-4cc2-11eb-1359-f3f2d060452b
+# ╠═7a669466-4cc2-11eb-1359-f3f2d060452b
 # ╟─2180a1f4-4f8b-11eb-073b-4f671634dc37
 # ╟─318885e6-4f8b-11eb-2b78-49f08e7074fc
