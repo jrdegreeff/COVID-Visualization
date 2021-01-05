@@ -26,10 +26,17 @@ begin
 	using CSV
 	using DataFrames
 	using Dates
+	using InteractiveUtils
+	using Markdown
 	using Statistics
 	using Plots
 	using PlutoUI
 end
+
+# ╔═╡ 7ec0992a-4f8e-11eb-3500-53545a706222
+md"""
+## Data Preparation
+"""
 
 # ╔═╡ fd95c222-4cbf-11eb-0690-57cc206d122a
 begin
@@ -70,21 +77,16 @@ function get_case_count(state, date, normalize=false)
     return length(cases) == 1 ? cases[1] : 0
 end;
 
+# ╔═╡ 70496912-4f8e-11eb-28ca-c50ae0af115e
+md"""
+## Visualization
+"""
+
 # ╔═╡ b9c78b8a-4edf-11eb-0a36-c72d60e4680a
 begin
 	checkbox = @bind normalize CheckBox(default=true)
 	md"""
 	Normalize by population $(checkbox)
-	"""
-end
-
-# ╔═╡ b0a5a098-4edf-11eb-358e-233509f3f621
-begin
-	select = @bind states MultiSelect(normalize ? population_states : unique_states)
-	md"""
-	Select the states to display.
-	
-	$(select)
 	"""
 end
 
@@ -103,11 +105,11 @@ md"""
 
 # ╔═╡ 4d68678c-4cc2-11eb-1832-9921503256c1
 # Function to prepare version of data for a log range
-floatify(data, min_value = 0) = Dict(c => map(x -> x > min_value ? x : NaN, d) for (c, d) ∈ data);
+floatify(data, min_value = 0) = Dict(c => map(x -> x > min_value ? x : NaN, d) for (c, d) ∈ data)
 
 # ╔═╡ 6bb8b566-4cc2-11eb-330b-13eae1cc5858
 # Function to determine upper bound for a log range
-max_value(data) = 10^ceil(Int64, log(10, maximum([d for (_, c) ∈ data for d ∈ c if d !== NaN])));
+max_value(data) = 10^ceil(Int64, log(10, maximum([d for (_, c) ∈ data for d ∈ c if d !== NaN])))
 
 # ╔═╡ 7a669466-4cc2-11eb-1359-f3f2d060452b
 # Function to plot weekly change vs aggregate on a log scale
@@ -149,7 +151,53 @@ function plot_covid(aggregate_data, dates, date_index, min_value = 50)
 	ylabel!(normalize ? "Recent Confirmed Cases per 100,000 Residents" : "Recent Confirmed Cases")
 	title!("Trajectory of COVID-19 Confirmed Cases ($(dates[date_index]))")
 	p |> as_svg
-end;
+end
+
+# ╔═╡ 2180a1f4-4f8b-11eb-073b-4f671634dc37
+md"""
+## Library Overrides
+"""
+
+# ╔═╡ 318885e6-4f8b-11eb-2b78-49f08e7074fc
+begin
+	import Markdown: htmlesc, withtag
+	
+    struct MultiSelect
+        options::Array{Pair{<:AbstractString,<:Any},1}
+        default::Union{Missing, AbstractVector{AbstractString}}
+        size::Int
+    end
+    
+	MultiSelect(options::Array{<:AbstractString,1}; default=missing, size=5) = MultiSelect([o => o for o in options], default, size)
+    MultiSelect(options::Array{<:Pair{<:AbstractString,<:Any},1}; default=missing, size=5) = MultiSelect(options, default, size)
+    
+	function Base.show(io::IO, ::MIME"text/html", select::MultiSelect)
+        withtag(io, Symbol("select multiple"), :size => string(select.size)) do
+            for o in select.options
+                print(io, """<option value="$(htmlesc(o.first))"$(!ismissing(select.default) && o.first ∈ select.default ? " selected" : "")>""")
+                if showable(MIME"text/html"(), o.second)
+                    show(io, MIME"text/html"(), o.second)
+                else
+                    print(io, o.second)
+                end
+                print(io, "</option>")
+            end
+        end
+    end
+    
+	Base.get(select::MultiSelect) = ismissing(select.default) ? Any[] : select.default
+end
+
+# ╔═╡ b7aa216e-4f8d-11eb-339c-394d2c23ee4f
+begin
+	state_options = normalize ? population_states : unique_states
+	select = @bind states MultiSelect(state_options, size=length(state_options))
+    md"""
+    Select the states to display.
+
+    $(select)
+    """
+end
 
 # ╔═╡ c60b7e00-4cc1-11eb-2e78-c1a55563de15
 begin
@@ -161,14 +209,18 @@ end
 
 # ╔═╡ Cell order:
 # ╟─073afcbe-4cbf-11eb-33a8-a327232257eb
+# ╟─7ec0992a-4f8e-11eb-3500-53545a706222
 # ╠═fd95c222-4cbf-11eb-0690-57cc206d122a
 # ╠═aadc3bac-4cc5-11eb-298c-1182973f7011
 # ╠═9e089168-4cc1-11eb-023a-8d7cfd681e88
+# ╟─70496912-4f8e-11eb-28ca-c50ae0af115e
 # ╟─b9c78b8a-4edf-11eb-0a36-c72d60e4680a
-# ╟─b0a5a098-4edf-11eb-358e-233509f3f621
+# ╟─b7aa216e-4f8d-11eb-339c-394d2c23ee4f
 # ╟─dd4ae0b4-4cc2-11eb-0dad-7de8cb6c055b
 # ╟─c60b7e00-4cc1-11eb-2e78-c1a55563de15
 # ╟─3fbcd01c-4cc2-11eb-2613-190f71f8b3c7
-# ╠═4d68678c-4cc2-11eb-1832-9921503256c1
-# ╠═6bb8b566-4cc2-11eb-330b-13eae1cc5858
-# ╠═7a669466-4cc2-11eb-1359-f3f2d060452b
+# ╟─4d68678c-4cc2-11eb-1832-9921503256c1
+# ╟─6bb8b566-4cc2-11eb-330b-13eae1cc5858
+# ╟─7a669466-4cc2-11eb-1359-f3f2d060452b
+# ╟─2180a1f4-4f8b-11eb-073b-4f671634dc37
+# ╟─318885e6-4f8b-11eb-2b78-49f08e7074fc
