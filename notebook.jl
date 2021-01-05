@@ -38,7 +38,7 @@ md"""
 # United States COVID-19 Visualization
 This is a visualization of weekly reported COVID-19 cases against total reported cases. The plot is done on a log-scale causing exponential growth to be represented linearly. Since time is not explicitly represented on the graph, it allows for direct comparison between states who experienced similar case trends at different times. The visualization also provides an option to normalize for population data to give a better comparison for states with vastly different populations.
 
-This project was inspired by Problem Set 1 for [MIT Course 6.S083 Spring 2020](https://www.eecs.mit.edu/academics-admissions/academic-information/subject-updates-spring-2020/6s083) and [this visualization](https://aatishb.com/covidtrends/) created by Aatish Bhatia.
+This project was created by Jeremiah DeGreeff with inspiration from Problem Set 1 for [MIT Course 6.S083 Spring 2020](https://www.eecs.mit.edu/academics-admissions/academic-information/subject-updates-spring-2020/6s083) and [this visualization](https://aatishb.com/covidtrends/) created by Aatish Bhatia.
 """
 
 # ╔═╡ 7ec0992a-4f8e-11eb-3500-53545a706222
@@ -193,7 +193,7 @@ end
 
 # ╔═╡ 2180a1f4-4f8b-11eb-073b-4f671634dc37
 md"""
-## Library Overrides
+## PlutoUI Library Overrides
 """
 
 # ╔═╡ 318885e6-4f8b-11eb-2b78-49f08e7074fc
@@ -262,12 +262,12 @@ end
 # ╟─dd4ae0b4-4cc2-11eb-0dad-7de8cb6c055b
 # ╟─e7871fa2-4f9c-11eb-0d97-f7040e7c285c
 # ╟─68593592-4f9e-11eb-2fac-bb30829cb8f0
-# ╠═c60b7e00-4cc1-11eb-2e78-c1a55563de15
+# ╟─c60b7e00-4cc1-11eb-2e78-c1a55563de15
 # ╟─3fbcd01c-4cc2-11eb-2613-190f71f8b3c7
 # ╟─513019c0-4f9a-11eb-1086-b795d60a5b50
 # ╟─54673912-4f99-11eb-36ca-9b0124ed444b
 # ╟─76fb1292-4f95-11eb-1824-4d5437b91463
 # ╟─6bb8b566-4cc2-11eb-330b-13eae1cc5858
-# ╠═7a669466-4cc2-11eb-1359-f3f2d060452b
+# ╟─7a669466-4cc2-11eb-1359-f3f2d060452b
 # ╟─2180a1f4-4f8b-11eb-073b-4f671634dc37
 # ╟─318885e6-4f8b-11eb-2b78-49f08e7074fc
