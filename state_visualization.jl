@@ -36,7 +36,7 @@ end
 # ╔═╡ 1b720d94-4f8f-11eb-0baf-bbcd93231972
 md"""
 # United States COVID-19 Visualization
-This is a visualization of weekly reported COVID-19 cases against total reported cases. The plot is done on a log-scale causing exponential growth to be represented linearly. Since time is not explicitly represented on the graph, it allows for direct comparison between states who experienced similar case trends at different times. The visualization also provides an option to normalize for population data to give a better comparison for states with vastly different populations.
+This is a visualization of weekly reported COVID-19 cases against total reported cases. The plot is done on a log-scale causing exponential growth to be represented linearly. Since time is not explicitly represented on the graph, direct comparisons can be drawn between states who experienced similar case trends at different times. The visualization also provides an option to normalize for population data to give a better comparison for states with vastly different populations.
 
 This project was created by Jeremiah DeGreeff with inspiration from Problem Set 1 for [MIT Course 6.S083 Spring 2020](https://www.eecs.mit.edu/academics-admissions/academic-information/subject-updates-spring-2020/6s083) and [this visualization](https://aatishb.com/covidtrends/) created by Aatish Bhatia.
 """
@@ -153,7 +153,7 @@ truncate(data, min_value = 0) = map(x -> x > min_value ? x : NaN, data)
 
 # ╔═╡ 6bb8b566-4cc2-11eb-330b-13eae1cc5858
 # Function to determine upper bound for a log range
-max_value(data) = 10^ceil(Int64, log(10, maximum([d for (_, s) ∈ data for d ∈ s if d !== NaN])))
+max_value(data) = 10^ceil(Int64, log(10, maximum([d for (_, s) ∈ data for d ∈ s if !isnan(d)])))
 
 # ╔═╡ 7a669466-4cc2-11eb-1359-f3f2d060452b
 # Function to plot weekly change vs aggregate on a log scale
@@ -169,8 +169,17 @@ function plot_covid(aggregate_data, dates, date_index; min_value = 10, double_ra
 	aggregate_data = apply_over_dict(truncate, aggregate_data, min_value)
     weekly_change_data = apply_over_dict(truncate, weekly_change_data)
 	
-	xlims!(10^floor(Int64, log(10, min_value)), max_value(aggregate_data))
-	ylims!(1, max_value(weekly_change_data))
+	min_x = 10^floor(Int64, log(10, min_value))
+	if all(s -> all(isnan, s), values(aggregate_data))
+		x_range = (min_x, min_x * 10)
+		y_range = (1, 10)
+	else
+		x_range = (min_x, max_value(aggregate_data))
+		y_range = (1, max_value(weekly_change_data))
+	end
+	xlims!(x_range)
+	ylims!(y_range)
+	
 	for (i, c) in enumerate(keys(aggregate_data))
 		plot!(aggregate_data[c][1:date_index], weekly_change_data[c][1:date_index], color=i, label=false)
 		if !isnan(aggregate_data[c][date_index]) && !isnan(weekly_change_data[c][date_index])
@@ -180,7 +189,7 @@ function plot_covid(aggregate_data, dates, date_index; min_value = 10, double_ra
 	
 	if !ismissing(double_rate)
 		# Exponential data provides a reference for what pure exponential growth with a particular growth rate would look like
-		exponential_aggregate = [2^(t / double_rate) for t ∈ 0:ceil(log2(max_value(aggregate_data)) * double_rate)]
+		exponential_aggregate = [2^(t / double_rate) for t ∈ 0:ceil(log2(x_range[2]) * double_rate)]
 		exponential_weekly_change = aggreggate_to_weekly_change(exponential_aggregate)
 
 		exponential_aggregate = truncate(exponential_aggregate)
